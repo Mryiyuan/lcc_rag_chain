@@ -38,15 +38,18 @@ rag_chain/
 │   ├── __init__.py
 │   └── helpers.py         # 辅助函数
 ├── temp/                  # 临时文件目录
-└── chroma_db/             # Chroma 数据库文件
+├── chroma_db/             # Chroma 数据库文件
+└── docker-compose/        # Docker Compose 配置
+    ├── Qwen3-0.6B-GPTQ-Int8/  # Qwen3 LLM 模型 Docker 配置
+    └── Qwen3-Embedding-0.6B/  # Qwen3 Embedding 模型 Docker 配置
 ```
 
 ## 安装说明
 
 1. 克隆代码库：
    ```bash
-   git clone <repository-url>
-   cd rag_chain
+   git clone https://github.com/Mryiyuan/lcc_rag_chain.git
+   cd lcc_rag_chain
    ```
 
 2. 安装所需依赖：
@@ -145,3 +148,55 @@ rag_chain/
 ## 许可证
 
 本项目采用 MIT 许可证 - 详情请见 LICENSE 文件。
+
+
+## Docker 部署
+
+`docker-compose` 目录包含了将 Qwen3 模型作为 Docker 容器运行的配置。这提供了一种便捷的方式来部署所需的模型服务。
+
+### 前提条件
+- 系统已安装 Docker 和 Docker Compose
+- 具有 CUDA 支持的 NVIDIA GPU（用于 GPU 加速）
+- 已安装 NVIDIA Container Toolkit
+
+### 可用配置
+
+1. **Qwen3-0.6B-GPTQ-Int8**：用于运行 Qwen3 语言模型（带有 GPTQ 量化）的配置
+2. **Qwen3-Embedding-0.6B**：用于运行 Qwen3 嵌入模型的配置
+
+### 使用方法
+
+1. 首先，确保您在本地有 Qwen3 模型。默认配置假设模型位于以下位置：
+   - Qwen3-0.6B-GPTQ-Int8：`D:\model\Qwen3-0.6B-GPTQ-Int8`
+   - Qwen3-Embedding-0.6B：`D:/model/Qwen/Qwen3-Embedding-0.6B`
+
+   **注意**：如果您的模型位于不同的目录，需要更新相应 `docker-compose.yml` 文件中的卷映射。
+
+2. 启动所需的服务：
+
+   对于语言模型：
+   ```bash
+   cd docker-compose/Qwen3-0.6B-GPTQ-Int8
+   docker-compose up -d
+   ```
+
+   对于嵌入模型：
+   ```bash
+   cd docker-compose/Qwen3-Embedding-0.6B
+   docker-compose up -d
+   ```
+
+3. 验证服务是否正常运行：
+   ```bash
+   docker-compose ps
+   ```
+
+4. 更新应用程序配置（`config.py` 或通过命令行参数）以指向这些服务：
+   - LLM 服务：`http://localhost:8800/v1`
+   - Embedding 服务：`http://localhost:50001/v1`
+
+### 配置说明
+- 两种配置均使用 `vllm/vllm-openai:v0.10.1.1` 镜像
+- API 密钥设置为默认值（`sk-123456` 和 `sk123456`）用于测试目的
+- GPU 内存利用率和其他参数针对典型使用场景进行了优化
+- 嵌入服务使用 `pooling` 运行器来生成嵌入向量

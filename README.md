@@ -39,15 +39,18 @@ rag_chain/
 │   ├── __init__.py
 │   └── helpers.py         # Helper functions
 ├── temp/                  # Temporary files directory
-└── chroma_db/             # Chroma database files
+├── chroma_db/             # Chroma database files
+└── docker-compose/        # Docker Compose configurations
+    ├── Qwen3-0.6B-GPTQ-Int8/  # Qwen3 LLM model Docker configuration
+    └── Qwen3-Embedding-0.6B/  # Qwen3 Embedding model Docker configuration
 ```
 
 ## Installation
 
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
-   cd rag_chain
+   git clone https://github.com/Mryiyuan/lcc_rag_chain.git
+   cd lcc_rag_chain
    ```
 
 2. Install the required dependencies:
@@ -148,3 +151,54 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.# rag_chain
+
+## Docker Deployment
+
+The `docker-compose` directory contains configurations for running the Qwen3 models as Docker containers. This provides a convenient way to deploy the required model services.
+
+### Prerequisites
+- Docker and Docker Compose installed on your system
+- NVIDIA GPU with CUDA support (for GPU acceleration)
+- NVIDIA Container Toolkit installed
+
+### Available Configurations
+
+1. **Qwen3-0.6B-GPTQ-Int8**: Configuration for running the Qwen3 language model with GPTQ quantization
+2. **Qwen3-Embedding-0.6B**: Configuration for running the Qwen3 embedding model
+
+### Usage
+
+1. First, ensure you have the Qwen3 models available locally. The default configuration assumes the models are located at:
+   - Qwen3-0.6B-GPTQ-Int8: `D:\model\Qwen3-0.6B-GPTQ-Int8`
+   - Qwen3-Embedding-0.6B: `D:/model/Qwen/Qwen3-Embedding-0.6B`
+
+   **Note**: If your models are located in a different directory, you need to update the volume mappings in the respective `docker-compose.yml` files.
+
+2. Start the desired service:
+
+   For the language model:
+   ```bash
+   cd docker-compose/Qwen3-0.6B-GPTQ-Int8
+   docker-compose up -d
+   ```
+
+   For the embedding model:
+   ```bash
+   cd docker-compose/Qwen3-Embedding-0.6B
+   docker-compose up -d
+   ```
+
+3. Verify that the services are running:
+   ```bash
+   docker-compose ps
+   ```
+
+4. Update the application configuration (`config.py` or via command-line arguments) to point to these services:
+   - LLM service: `http://localhost:8800/v1`
+   - Embedding service: `http://localhost:50001/v1`
+
+### Configuration Notes
+- Both configurations use the `vllm/vllm-openai:v0.10.1.1` image
+- API keys are set to default values (`sk-123456` and `sk123456`) for testing purposes
+- GPU memory utilization and other parameters are optimized for typical usage scenarios
+- The embedding service uses the `pooling` runner to generate embeddings
