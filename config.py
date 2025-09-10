@@ -5,38 +5,45 @@ from langchain_chroma import Chroma
 
 # Configuration parameters
 class Config:
-    # API配置
+    # API Configuration
     EMBEDDING_API_BASE = "http://host.docker.internal:50001/v1"
     EMBEDDING_API_KEY = "sk123456"
     EMBEDDING_MODEL_NAME = "qwen3-ebd-0d6"
     
-    # vLLM配置
+    # vLLM Configuration
     VLLM_API_BASE = "http://host.docker.internal:8800/v1"
     VLLM_API_KEY = "sk-123456"
     VLLM_MODEL_NAME = "Qwen3-0.6B-GPTQ-Int8"
     
-    # 数据库配置
+    # Rerank Configuration
+    RERANK_ENABLED = True
+    RERANK_API_BASE = "http://host.docker.internal:60001/v1"
+    RERANK_API_KEY = "sk123456"
+    RERANK_MODEL_NAME = "qwen3-reranker-0d6"
+    RERANK_TOP_K = 3  # Number of documents to keep after reranking
+    
+    # Database Configuration
     CHROMA_DB_PATH = "./chroma_db"
     PHARMA_DB_PATH = "./pharma_db"
     COLLECTION_NAME = "pharma_database"
     
-    # 文本分割配置 - 已调整为适合嵌入模型的上下文长度
+    # Text Splitting Configuration - Adjusted for embedding model context length
     CHUNK_SIZE = 200
     CHUNK_OVERLAP = 20
     
-    # 检索配置
+    # Retrieval Configuration
     SEARCH_K = 5
-    MAX_TOKENS = 300  # 已调整为适合小模型的上下文长度
+    MAX_TOKENS = 300  # Adjusted for small model context length
     TEMPERATURE = 0.7
     
-    # 无思考模式配置
+    # No-Think Mode Configuration
     NO_THINK_MODE = False
     
-    # 创建临时目录
+    # Create temporary directory
     os.makedirs("./temp", exist_ok=True)
 
 # Initialize local embedding model
-# 指向本机 vLLM 服务，模型名和 served-model-name 保持一致
+# Pointing to local vLLM service, model name matches served-model-name
 embedding_model = OpenAIEmbeddings(
     openai_api_base=Config.EMBEDDING_API_BASE,
     openai_api_key=Config.EMBEDDING_API_KEY,

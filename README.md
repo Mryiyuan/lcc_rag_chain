@@ -11,12 +11,15 @@ RAG Chain is a Retrieval-Augmented Generation (RAG) application designed for gen
 - **Modular Design**: Well-organized codebase with clear separation of concerns
 - **Configurable Parameters**: Easily customize the application behavior through configuration
 - **Streamlit UI**: User-friendly web interface for interaction
+- **Docker Deployment**: One-click containerization, memory-efficient deployment
+  - All models (LLM/embedding/reranker) built on [vllm/vllm-openai](https://hub.docker.com/r/vllm/vllm-openai) official image with automatic tensor-parallelism for minimal GPU memory usage
+  - Local testing: `docker compose up -d` to start the complete service; For production, simply modify model names in `.env` or update `OPENAI_BASE_URL` to instantly switch to any OpenAI-compatible model (GPT, Claude, Qwen, Baichuan, etc.)
+  - Provides `Dockerfile` & `docker-compose.yml`, supporting both CPU debugging and GPU inference modes, zero changes needed for cloud deployment
 
 ## Project Structure
 
 ```
 rag_chain/
-├── app.py                 # Original monolithic application (for reference)
 ├── main.py                # Application entry point with parameter support
 ├── config.py              # Configuration parameters
 ├── requirements.txt       # Python dependencies
@@ -44,7 +47,8 @@ rag_chain/
 ├── chroma_db/             # Chroma database files
 └── docker-compose/        # Docker Compose configurations
     ├── Qwen3-0.6B-GPTQ-Int8/  # Qwen3 LLM model Docker configuration
-    └── Qwen3-Embedding-0.6B/  # Qwen3 Embedding model Docker configuration
+    ├── Qwen3-Embedding-0.6B/  # Qwen3 Embedding model Docker configuration
+    └── Qwen3-Reranker-0.6B/   # Qwen3 Reranker model Docker configuration
 ```
 
 ## Installation
@@ -93,7 +97,7 @@ The application can be configured through the `config.py` file or command-line a
 
 2. Or start with custom parameters:
    ```bash
-   streamlit run main.py --port 8502 --chunk-size 1024
+   streamlit run main.py --server.port 8502
    ```
 
 3. Open your browser and navigate to `http://localhost:8501` (or your custom port)
@@ -152,7 +156,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.# rag_chain
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Docker Deployment
 
@@ -167,12 +171,14 @@ The `docker-compose` directory contains configurations for running the Qwen3 mod
 
 1. **Qwen3-0.6B-GPTQ-Int8**: Configuration for running the Qwen3 language model with GPTQ quantization
 2. **Qwen3-Embedding-0.6B**: Configuration for running the Qwen3 embedding model
+3. **Qwen3-Reranker-0.6B**: Configuration for running the Qwen3 reranker model
 
 ### Usage
 
 1. First, ensure you have the Qwen3 models available locally. The default configuration assumes the models are located at:
    - Qwen3-0.6B-GPTQ-Int8: `D:\model\Qwen3-0.6B-GPTQ-Int8`
    - Qwen3-Embedding-0.6B: `D:/model/Qwen/Qwen3-Embedding-0.6B`
+   - Qwen3-Reranker-0.6B: `D:/model/Qwen/Qwen3-Reranker-0.6B`
 
    **Note**: If your models are located in a different directory, you need to update the volume mappings in the respective `docker-compose.yml` files.
 
@@ -190,6 +196,12 @@ The `docker-compose` directory contains configurations for running the Qwen3 mod
    docker-compose up -d
    ```
 
+   For the reranker model:
+   ```bash
+   cd docker-compose/Qwen3-Reranker-0.6B
+   docker-compose up -d
+   ```
+
 3. Verify that the services are running:
    ```bash
    docker-compose ps
@@ -198,9 +210,10 @@ The `docker-compose` directory contains configurations for running the Qwen3 mod
 4. Update the application configuration (`config.py` or via command-line arguments) to point to these services:
    - LLM service: `http://localhost:8800/v1`
    - Embedding service: `http://localhost:50001/v1`
+   - Reranker service: `http://localhost:60001/v1`
 
 ### Configuration Notes
-- Both configurations use the `vllm/vllm-openai:v0.10.1.1` image
-- API keys are set to default values (`sk-123456` and `sk123456`) for testing purposes
+- All configurations use the `vllm/vllm-openai:v0.10.1.1` image
+- API keys are set to default values (`sk-123456`, `sk123456`) for testing purposes
 - GPU memory utilization and other parameters are optimized for typical usage scenarios
-- The embedding service uses the `pooling` runner to generate embeddings
+- The embedding service uses the `pooling` runner to generate embedding vectors

@@ -1,20 +1,20 @@
-import streamlit as st
 import sys
 import os
 
-# 添加项目根目录到Python路径
+# Add project root directory to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import streamlit as st
 from rag_chain.chain import run_rag_chain_stream
 from vector_db.add_documents import add_to_db
 from vector_db.chroma_db import delete_documents_by_file_id
 from config import Config
 
-# 初始化聊天历史
+# Initialize chat history
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 
-# 初始化已上传文件列表
+# Initialize uploaded files list
 if 'uploaded_files' not in st.session_state:
     st.session_state.uploaded_files = []
 
@@ -25,7 +25,7 @@ def render_main_page():
     st.title("Retrieval System")
     st.subheader("Chat with your knowledge base")
 
-    # 显示聊天历史
+    # Display chat history
     for message in st.session_state.chat_history:
         if message["role"] == "user":
             with st.chat_message("user"):
@@ -34,31 +34,31 @@ def render_main_page():
             with st.chat_message("assistant"):
                 st.markdown(message["content"])
 
-    # 聊天输入框
+    # Chat input box
     if prompt := st.chat_input("Ask a question"):
-        # 添加用户消息到历史
+        # Add user message to history
         st.session_state.chat_history.append({"role": "user", "content": prompt})
         
-        # 显示用户消息
+        # Display user message
         with st.chat_message("user"):
             st.markdown(prompt)
         
-        # 显示助手响应
+        # Display assistant response
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
-                # 创建流式输出的占位符
+                # Create placeholder for streaming output
                 message_placeholder = st.empty()
                 full_response = ""
                 
-                # 流式获取响应，传入聊天历史
+                # Get streaming response with chat history
                 for chunk in run_rag_chain_stream(query=prompt, chat_history=st.session_state.chat_history):
                     full_response += chunk
                     message_placeholder.markdown(full_response + "▌")
                 
-                # 显示最终响应
+                # Display final response
                 message_placeholder.markdown(full_response)
                 
-                # 添加助手响应到历史
+                # Add assistant response to history
                 st.session_state.chat_history.append({"role": "assistant", "content": full_response})
 
 
@@ -70,13 +70,13 @@ def render_sidebar():
         # st.write(f"Base URL: {Config.VLLM_API_BASE}")
         st.write(f"Model: {Config.VLLM_MODEL_NAME}")
         
-        # 添加无思考模式开关
+        # Add no-thought mode toggle
         no_thought_mode = st.toggle("Enable No-Thought Mode", value=Config.NO_THINK_MODE)
         if no_thought_mode != Config.NO_THINK_MODE:
             Config.NO_THINK_MODE = no_thought_mode
             st.success(f"No-Thought Mode {'enabled' if no_thought_mode else 'disabled'}")
         
-        # 聊天历史管理
+        # Chat history management
         if st.button("Clear Chat History"):
             st.session_state.chat_history = []
             st.success("Chat history cleared!")
@@ -97,13 +97,13 @@ def render_sidebar():
                     add_to_db(pdf_docs)
                     st.success(":file_folder: Documents successfully added to the database!")
         
-        # 已上传文件管理
+        # Uploaded files management
         st.markdown("---")
         st.subheader("Uploaded Files")
         
-        # 格式化文件大小的辅助函数
+        # Helper function to format file size
         def format_size(size_bytes):
-            """将字节大小格式化为人类可读的格式"""
+            """Format byte size into human-readable format"""
             if size_bytes < 1024:
                 return f"{size_bytes} B"
             elif size_bytes < 1048576:
@@ -111,30 +111,30 @@ def render_sidebar():
             else:
                 return f"{size_bytes/1048576:.2f} MB"
         
-        # 显示已上传文件并提供删除选项
+        # Display uploaded files with delete option
         if st.session_state.uploaded_files:
             for file in st.session_state.uploaded_files:
                 col1, col2 = st.columns([3, 1])
                 with col1:
                     st.markdown(f"**{file['name']}**")
-                    st.caption(f"大小: {format_size(file['size'])}")
-                    st.caption(f"上传时间: {file['upload_time']}")
+                    st.caption(f"Size: {format_size(file['size'])}")
+                    st.caption(f"Upload time: {file['upload_time']}")
                 with col2:
-                    if st.button("删除", key=f"delete_{file['id']}"):
-                        # 从向量数据库中删除文档
+                    if st.button("Delete", key=f"delete_{file['id']}"):
+                        # Delete documents from vector database
                         success = delete_documents_by_file_id(file['id'])
                         if success:
-                            # 从session state中移除文件
+                            # Remove file from session state
                             st.session_state.uploaded_files = [
                                 f for f in st.session_state.uploaded_files if f['id'] != file['id']
                             ]
-                            st.success(f"成功删除 '{file['name']}' 及其向量")
-                            # 刷新页面更新列表
+                            st.success(f"Successfully deleted '{file['name']}' and its vectors")
+                            # Refresh page to update list
                             st.rerun()
                         else:
-                            st.error(f"删除 '{file['name']}' 的向量失败")
+                            st.error(f"Failed to delete vectors for '{file['name']}'")
         else:
-            st.info("尚未上传文件。")
+            st.info("No files uploaded yet.")
         
-        # 侧边栏页脚
+        # Sidebar footer
         st.write("Built with ❤️ by [LiChenchen]()")

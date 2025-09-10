@@ -1,7 +1,7 @@
-from openai import OpenAI
 from config import Config
 from vector_db.chroma_db import get_retriever
 from utils.helpers import format_docs
+from utils.reranker import rerank_documents
 import re
 from openai import OpenAI
 
@@ -24,6 +24,11 @@ def run_rag_chain(query):
     
     # Get relevant documents
     docs = retriever.invoke(query)
+    
+    # Apply reranking if enabled
+    if Config.RERANK_ENABLED:
+        docs = rerank_documents(query, docs)
+    
     context = format_docs(docs)
 
     # Initialize OpenAI client for vLLM
@@ -45,7 +50,7 @@ Don't justify your answers.
 Don't give information not mentioned in the CONTEXT INFORMATION.
 Do not say "according to the context" or "mentioned in the context" or similar."""
 
-    # 处理无思考模式
+    # Handle no-think mode
     if Config.NO_THINK_MODE:
         prompt = "/no_think\n" + prompt
 
@@ -60,7 +65,7 @@ Do not say "according to the context" or "mentioned in the context" or similar."
             temperature=Config.TEMPERATURE
         )
         
-        # 剔除思考区块
+        # Remove thought blocks
         assistant_response = response.choices[0].message.content or ""
         assistant_response = re.sub(r'</think>.*?</think>', '', assistant_response, flags=re.S).strip()
         return assistant_response
@@ -86,6 +91,11 @@ def run_rag_chain_stream(query, chat_history=None):
     
     # Get relevant documents
     docs = retriever.invoke(query)
+    
+    # Apply reranking if enabled
+    if Config.RERANK_ENABLED:
+        docs = rerank_documents(query, docs)
+    
     context = format_docs(docs)
 
     # Initialize OpenAI client for vLLM
@@ -95,22 +105,22 @@ def run_rag_chain_stream(query, chat_history=None):
     )
 
     try:
-        # 构建包含聊天历史的消息列表
+        # Build message list with chat history
         messages = []
         
-        # 添加系统消息（角色设定）
+        # Add system message (role setting)
         system_content = "You are a highly knowledgeable assistant."
         messages.append({"role": "system", "content": system_content})
         
-        # 添加聊天历史
+        # Add chat history
         if chat_history:
             for msg in chat_history:
                 if isinstance(msg, dict) and "role" in msg and "content" in msg:
                     messages.append(msg)
         
-        # 根据是否有上下文调整用户提示
+        # Adjust user prompt based on whether there's context
         if context and context.strip():
-            # 如果有上下文，使用RAG模式
+            # If there's context, use RAG mode
             user_prompt = f"""Answer the question based on the following context if relevant:
 {context}
 
@@ -118,14 +128,14 @@ Question: {query}
 
 If the context provides relevant information, use it to answer accurately. If not, you can use your own knowledge."""
         else:
-            # 如果没有上下文，使用普通对话模式
+            # If there's no context, use normal conversation mode
             user_prompt = query
         
-        # 处理无思考模式
+        # Handle no-think mode
         no_think_prefix = "/no_think\n" if Config.NO_THINK_MODE else ""
         user_prompt = no_think_prefix + user_prompt
         
-        # 添加当前查询
+        # Add current query
         messages.append({"role": "user", "content": user_prompt})
         
         # Call vLLM API with streaming
@@ -137,17 +147,17 @@ If the context provides relevant information, use it to answer accurately. If no
             stream=True
         )
         
-        # 流式处理响应 - 先收集完整响应，然后一次性清理并输出
-        # 这样可以避免使用退格字符导致的乱码问题
+        # Process streaming response - first collect full response, then clean and output
+        # This avoids garbled characters caused by backspace characters
         full_response = ""
         for chunk in response:
             if chunk.choices[0].delta.content is not None:
                 delta_content = chunk.choices[0].delta.content
                 full_response += delta_content
-                # 实时流式输出原始内容
+                # Stream output raw content in real-time
                 yield delta_content
         
-        # 注意：如果需要清理思考区块，应该在收集完整响应后一次性处理
-        # 但为了保持流式输出的连续性，我们选择直接流式输出原始内容
+        # Note: If thought block cleaning is needed, it should be done after collecting full response
+        # But to maintain the continuity of streaming output, we choose to stream output raw content directly
     except Exception as e:
         yield f"Error generating response: {str(e)}"

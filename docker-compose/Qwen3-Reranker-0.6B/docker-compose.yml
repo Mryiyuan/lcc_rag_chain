@@ -1,0 +1,29 @@
+services:
+  qwen3-0.6-reranker:
+    image: vllm/vllm-openai:v0.10.1.1
+    container_name: qwen3-0.6-reranker
+    ports:
+      - "60001:8000"
+    volumes:
+      # Windows 绝对路径，Docker Desktop 直接识别
+      - D:/model/Qwen/Qwen3-Reranker-0.6B:/model
+    environment:
+      - VLLM_USE_MODELSCOPE=False   # 强制本地模型
+    command: >
+        --model /model
+        --runner pooling
+        --served-model-name qwen3-reranker-0d6
+        --dtype auto
+        --max-model-len 512
+        --gpu-memory-utilization 0.4
+        --api-key sk123456
+        --host 0.0.0.0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    stdin_open: true
+    tty: true
