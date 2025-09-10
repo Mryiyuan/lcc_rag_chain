@@ -1,11 +1,11 @@
-# PharmaQuery - Pharmaceutical Insight Retrieval System
+# RAG Chain - Generic Retrieval-Augmented Generation Application
 
-PharmaQuery is a Retrieval-Augmented Generation (RAG) application designed for the pharmaceutical industry. It allows users to ask questions about pharmaceutical topics and get accurate, context-aware answers based on uploaded research documents.
+RAG Chain is a Retrieval-Augmented Generation (RAG) application designed for general purpose document question answering. It allows users to ask questions about any topic and get accurate, context-aware answers based on uploaded documents.
 
 ## Features
 
-- **Document Upload**: Upload PDF research documents to enhance the knowledge base
-- **RAG-based Q&A**: Ask questions about pharmaceutical topics and get context-aware answers
+- **Document Upload**: Upload PDF documents to enhance the knowledge base
+- **RAG-based Q&A**: Ask questions about any topic and get context-aware answers
 - **Modular Design**: Well-organized codebase with clear separation of concerns
 - **Configurable Parameters**: Easily customize the application behavior through configuration
 - **Streamlit UI**: User-friendly web interface for interaction
@@ -39,7 +39,6 @@ rag_chain/
 │   ├── __init__.py
 │   └── helpers.py         # Helper functions
 ├── temp/                  # Temporary files directory
-├── pharma_db/             # Persistent Chroma database
 └── chroma_db/             # Chroma database files
 ```
 
@@ -96,7 +95,7 @@ The application can be configured through the `config.py` file or command-line a
 
 4. Use the interface to:
    - Ask questions in the main text area
-   - Upload PDF research documents in the sidebar
+   - Upload PDF documents in the sidebar
    - View model configuration information
 
 ## Modules Description
@@ -148,4 +147,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.# rag_chain
