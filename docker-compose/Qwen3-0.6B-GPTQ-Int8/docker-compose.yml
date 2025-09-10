@@ -1,0 +1,21 @@
+services:
+  vllm:
+    image: vllm/vllm-openai:v0.10.1.1
+    container_name: Qwen3-0.6B-GPTQ-Int8-vllm
+    gpus: all
+    ports: ["8800:8000"]
+    volumes:
+      - D:\model\Qwen3-0.6B-GPTQ-Int8:/model
+    environment:
+      - VLLM_LOGGING_LEVEL=INFO
+    command: >
+      --model /model
+      --dtype auto
+      --max-model-len 1024         
+      --gpu-memory-utilization 0.8  
+      --swap-space 4               
+      --host 0.0.0.0
+      --api-key sk-123456
+      --served-model-name Qwen3-0.6B-GPTQ-Int8   
+      
+     
