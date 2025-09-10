@@ -1,5 +1,7 @@
 # RAG Chain - Generic Retrieval-Augmented Generation Application
 
+[English](README.md) | [中文](README_CN.md)
+
 RAG Chain is a Retrieval-Augmented Generation (RAG) application designed for general purpose document question answering. It allows users to ask questions about any topic and get accurate, context-aware answers based on uploaded documents.
 
 ## Features
