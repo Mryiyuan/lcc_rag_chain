@@ -1,7 +1,8 @@
 import os
-import chromadb
+from pymilvus import MilvusClient, FieldSchema, CollectionSchema, DataType
 from langchain_openai import OpenAIEmbeddings
-from langchain_chroma import Chroma
+from langchain.embeddings.base import Embeddings
+from langchain_milvus import Milvus
 
 # Configuration parameters
 class Config:
@@ -23,9 +24,11 @@ class Config:
     RERANK_TOP_K = 3  # Number of documents to keep after reranking
     
     # Database Configuration
-    CHROMA_DB_PATH = "./chroma_db"
-    PHARMA_DB_PATH = "./pharma_db"
-    COLLECTION_NAME = "pharma_database"
+    MILVUS_URI = "http://192.168.50.3:19530"
+    MILVUS_TOKEN = "root:Milvus"
+    MILVUS_DATABASE = "rag_db"
+    MILVUS_COLLECTION_NAME = "pharma_database"
+    MILVUS_TIMEOUT = 10
     
     # Text Splitting Configuration - Adjusted for embedding model context length
     CHUNK_SIZE = 200
@@ -42,23 +45,37 @@ class Config:
     # Create temporary directory
     os.makedirs("./temp", exist_ok=True)
 
+# Initialize Milvus client
+client = MilvusClient(
+    uri=Config.MILVUS_URI,
+    token=Config.MILVUS_TOKEN,
+    timeout=Config.MILVUS_TIMEOUT
+)
+
+# Ensure the database exists
+databases = client.list_databases()
+if Config.MILVUS_DATABASE not in databases:
+    client.create_database(Config.MILVUS_DATABASE)
+
+# Switch to the database
+client.using_database(Config.MILVUS_DATABASE)
+
 # Initialize local embedding model
 # Pointing to local vLLM service, model name matches served-model-name
 embedding_model = OpenAIEmbeddings(
-    openai_api_base=Config.EMBEDDING_API_BASE,
-    openai_api_key=Config.EMBEDDING_API_KEY,
-    model=Config.EMBEDDING_MODEL_NAME
+    model=Config.EMBEDDING_MODEL_NAME,
+    api_key=Config.EMBEDDING_API_KEY,
+    base_url=Config.EMBEDDING_API_BASE
 )
 
-# Initialize Chroma client
-client = chromadb.PersistentClient(
-    path=Config.CHROMA_DB_PATH,
-    settings=chromadb.Settings(allow_reset=True),
-    tenant=chromadb.DEFAULT_TENANT,
-    database=chromadb.DEFAULT_DATABASE,
+# Initialize Milvus vector store using langchain_milvus
+db = Milvus(
+    embedding_function=embedding_model,
+    collection_name=Config.MILVUS_COLLECTION_NAME,
+    connection_args={
+        "uri": Config.MILVUS_URI,
+        "token": Config.MILVUS_TOKEN,
+        "db_name": Config.MILVUS_DATABASE,
+        "timeout": Config.MILVUS_TIMEOUT
+    }
 )
-
-# Initialize pharma database
-db = Chroma(collection_name=Config.COLLECTION_NAME,
-            embedding_function=embedding_model,
-            persist_directory=Config.PHARMA_DB_PATH)

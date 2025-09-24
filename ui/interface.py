@@ -7,7 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import streamlit as st
 from rag_chain.chain import run_rag_chain_stream
 from vector_db.add_documents import add_to_db
-from vector_db.chroma_db import delete_documents_by_file_id
+from vector_db.milvus_db import delete_documents_by_file_id
 from config import Config
 
 # Initialize chat history

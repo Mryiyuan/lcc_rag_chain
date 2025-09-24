@@ -11,6 +11,7 @@ lcc RAG Chain 是一个专为通用文档问答设计的检索增强生成（RAG
 - **模块化设计**：结构清晰、职责分明的代码库
 - **参数可配置**：通过配置轻松自定义应用程序行为
 - **Streamlit 界面**：用户友好的 Web 交互界面
+- **Milvus 向量数据库**：高性能、可扩展的向量搜索引擎，提供高效文档检索
 - **Docker 部署**：一键容器化，省心省显存  
   - 全部模型（LLM / embedding / reranker）基于 [vllm/vllm-openai](https://hub.docker.com/r/vllm/vllm-openai) 官方镜像构建，自动 tensor-parallel，显存占用最低。  
   - 本地测试：`docker compose up -d` 即可拉起完整服务；生产环境只需改 `.env` 中的模型名或 `OPENAI_BASE_URL`，立即切换任意兼容 OpenAI 接口的模型（GPT、Claude、Qwen、Baichuan 等）。  
@@ -19,7 +20,11 @@ lcc RAG Chain 是一个专为通用文档问答设计的检索增强生成（RAG
 ## 项目结构
 
 ```
-rag_chain/
+lcc_rag_chain/
+├── .gitignore             # Git 忽略文件
+├── LICENSE                # 许可证文件
+├── README.md              # 英文文档
+├── README_CN.md           # 中文文档
 ├── main.py                # 应用程序入口点，支持参数配置
 ├── config.py              # 配置参数
 ├── requirements.txt       # Python 依赖项
@@ -30,9 +35,11 @@ rag_chain/
 │   ├── __init__.py
 │   └── splitter.py        # 文本分割功能
 ├── embedding/             # 嵌入模型模块
+│   ├── __init__.py
+│   └── embedder.py        # 嵌入模型实现
 ├── vector_db/             # 向量数据库操作模块
 │   ├── __init__.py
-│   ├── chroma_db.py       # Chroma 数据库操作
+│   ├── milvus_db.py       # Milvus 数据库操作
 │   └── add_documents.py   # 文档添加功能
 ├── rag_chain/             # RAG 链操作模块
 │   ├── __init__.py
@@ -42,9 +49,12 @@ rag_chain/
 │   └── interface.py       # Streamlit 界面实现
 ├── utils/                 # 工具函数
 │   ├── __init__.py
-│   └── helpers.py         # 辅助函数
+│   ├── helpers.py         # 辅助函数
+│   └── reranker.py        # 文档重排序器实现
 ├── temp/                  # 临时文件目录
-├── chroma_db/             # Chroma 数据库文件
+├── test_milvus.py         # Milvus 综合测试脚本
+├── test_milvus_connection.py # Milvus 连接测试
+├── test_milvus_simple.py  # Milvus 简化测试脚本
 └── docker-compose/        # Docker Compose 配置
     ├── Qwen3-0.6B-GPTQ-Int8/  # Qwen3 LLM 模型 Docker 配置
     ├── Qwen3-Embedding-0.6B/  # Qwen3 Embedding 模型 Docker 配置
@@ -71,12 +81,19 @@ rag_chain/
 ### 配置参数
 
 - `EMBEDDING_API_BASE`：嵌入模型 API 基础 URL
+- `EMBEDDING_API_KEY`：嵌入服务的 API 密钥
+- `EMBEDDING_MODEL_NAME`：嵌入模型名称
 - `VLLM_API_BASE`：vLLM API 基础 URL
 - `CHUNK_SIZE`：文档分割的文本块大小
 - `CHUNK_OVERLAP`：文档分割的文本块重叠大小
 - `SEARCH_K`：相似性搜索中检索的文档数量
 - `MAX_TOKENS`：LLM 响应的最大 token 数
 - `TEMPERATURE`：LLM 响应生成的温度参数
+- `MILVUS_URI`：Milvus 服务器连接 URI
+- `MILVUS_TOKEN`：Milvus 认证令牌
+- `MILVUS_DATABASE`：Milvus 数据库名称
+- `MILVUS_COLLECTION_NAME`：Milvus 集合名称
+- `MILVUS_TIMEOUT`：Milvus 连接超时时间（秒）
 
 ### 命令行参数
 
@@ -119,32 +136,70 @@ rag_chain/
 - `split_documents()`：将文档分割成较小的块
 
 ### 向量数据库 (`vector_db/`)
-处理向量数据库操作：
-- `add_documents_to_db()`：向 Chroma 数据库添加文档
+处理 Milvus 向量数据库操作：
+- `add_documents_to_db()`：向 Milvus 数据库添加文档
 - `get_retriever()`：获取用于相似性搜索的检索器对象
 - `add_to_db()`：处理并添加上传的文件到数据库
+- `delete_documents_by_file_id()`：根据文件标识符从数据库删除文档
 
 ### RAG 链 (`rag_chain/`)
 实现检索增强生成链：
-- `run_rag_chain()`：使用 RAG 链处理查询
+- `run_rag_chain()`：使用 RAG 链处理查询，包括文档检索和 LLM 生成
+- `get_prompt_template()`：为 LLM 交互创建提示模板
 
 ### 用户界面 (`ui/`)
 实现 Streamlit 用户界面：
 - `render_main_page()`：渲染主应用页面
 - `render_sidebar()`：渲染包含配置和文件上传的侧边栏
+- `clear_messages()`：清除聊天历史
+
+### 嵌入模型 (`embedding/`)
+处理文本嵌入功能：
+- `get_embedding_model()`：返回配置的嵌入模型实例
 
 ### 工具函数 (`utils/`)
 包含辅助函数：
 - `format_docs()`：将文档对象格式化为单个字符串
+- `get_reranker()`：返回用于改进搜索结果的重排序器模型
+
+### 测试脚本
+项目包含多个测试脚本，用于验证 Milvus 数据库功能：
+- `test_milvus_simple.py`：Milvus 连接和基本操作的简化测试
+- `test_milvus_connection.py`：Milvus 连接和配置测试
+- `test_milvus.py`：Milvus 数据库操作的综合测试
+
+### 运行测试
+要验证 Milvus 是否配置正确且功能正常，您可以运行测试脚本：
+
+```bash
+# 运行简化版 Milvus 测试
+python test_milvus_simple.py
+
+# 运行 Milvus 连接测试
+python test_milvus_connection.py
+
+# 运行综合版 Milvus 测试
+python test_milvus.py
+```
+
+这些测试将验证：
+- Milvus 服务器连接
+- 嵌入模型功能
+- 向 Milvus 添加文档
+- 文档检索和搜索
+- 文档删除
 
 ## 依赖要求
 
 - Python 3.8+
 - Streamlit
 - Langchain
-- ChromaDB
+- Langchain Milvus
+- PyMilvus
 - OpenAI Python SDK
-- PyPDF2
+- PyPDF
+- sentence-transformers
+- loguru
 
 详细依赖项请参见 `requirements.txt` 文件。
 

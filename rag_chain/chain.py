@@ -1,5 +1,5 @@
 from config import Config
-from vector_db.chroma_db import get_retriever
+from vector_db.milvus_db import get_retriever
 from utils.helpers import format_docs
 from utils.reranker import rerank_documents
 import re
